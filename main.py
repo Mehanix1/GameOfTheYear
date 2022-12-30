@@ -33,22 +33,6 @@ class Player(pygame.sprite.Sprite):
 
 
 
-    def move(self, movement):
-        x, y = self.rect
-
-        if movement == 'up':
-            y -= 10
-        elif movement == 'down':
-            y += 10
-        elif movement == 'left':
-            x -= 10
-        elif movement == 'right':
-            x += 10
-
-
-        self.rect = self.image.get_rect().move(x,y)
-
-
 def start():
 
 
@@ -64,7 +48,7 @@ def start():
     while running:
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or pygame.key.get_pressed()[K_ESCAPE]:
                 running = False
 
 
