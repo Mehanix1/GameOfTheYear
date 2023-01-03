@@ -120,6 +120,8 @@ def start():
 
     running = True
     player = Player(500, 500)
+    velocity = 901
+    frame_delay = 0
 
     while running:
 
@@ -133,32 +135,33 @@ def start():
                 fog_group.update()
 
         # ------------------------------------------------------------------------------------------------
-        if (pygame.key.get_pressed()[K_RIGHT] or pygame.key.get_pressed()[K_d]):
+        distance = int(velocity * frame_delay)
+        if pygame.key.get_pressed()[K_RIGHT] or pygame.key.get_pressed()[K_d]:
 
-            player.rect.left += 10
+            player.rect.left += distance
             if pygame.sprite.collide_mask(player, anti_floor):  # Если после того как
                 # персонаж прошёл, он соприкасается со стеной
-                player.rect.left -= 10  # то его отбросит назад
+                player.rect.left -= distance  # то его отбросит назад
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_LEFT] or pygame.key.get_pressed()[K_a]:
-            player.rect.left -= 10
+            player.rect.left -= distance
             if pygame.sprite.collide_mask(player, anti_floor):
-                player.rect.left += 10
+                player.rect.left += distance
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_UP] or pygame.key.get_pressed()[K_w]:
-            player.rect.top -= 10
+            player.rect.top -= distance
 
             if pygame.sprite.collide_mask(player, anti_floor):
-                player.rect.top += 10
+                player.rect.top += distance
 
         # ------------------------------------------------------------------------------------------------
 
         if pygame.key.get_pressed()[K_DOWN] or pygame.key.get_pressed()[K_s]:
-            player.rect.top += 10
+            player.rect.top += distance
             if pygame.sprite.collide_mask(player, anti_floor):
-                player.rect.top -= 10
+                player.rect.top -= distance
 
         screen.blit(map, (0, 0))
         player_group.draw(screen)
@@ -168,6 +171,7 @@ def start():
         pygame.display.flip()
 
         clock.tick(FPS)
+        frame_delay = clock.tick(FPS) / 1000
 
 
 # -------------------------------------------------------------------------------------------------------------------
