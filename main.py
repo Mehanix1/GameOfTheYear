@@ -18,6 +18,7 @@ FPS = 60
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 #тест
+#тест2
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
