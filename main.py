@@ -92,91 +92,132 @@ class Fog(pygame.sprite.Sprite):
             self.rect = self.rect.move((pygame.display.get_surface().get_size()[0] * 2.5, 0))
 
 
-#def maps_loader(name_of_map):
-#    map = pygame.transform.scale(load_image(name_of_map), (
-#        pygame.display.get_surface().get_size()))  # Загрузать и изменить карту под размер окна
-#
-#    if name_of_map == "карта_дом.png":
-#        pygame.time.set_timer(pygame.USEREVENT + 1, 240)  # таймер для огня
-#        pygame.time.set_timer(pygame.USEREVENT + 2, 140)  # таймер для тумана
-#
-#        anti_floor = AntiFloor("пол_дом.png", map)
-#
-#        firentlmt = load_image("огонь.png")  # Fire not to load many times Огонь чтобы не загружать много раз
-#        FireAnimation(firentlmt, 6, 1, map.get_size()[0] // 4.8, map.get_size()[1] // 1.6, coefficient=2)
-#        FireAnimation(firentlmt, 6, 1, map.get_size()[0] // 1.5, map.get_size()[1] // 3.1, coefficient=3.5)
-#
-#        Fog(map)
-#
-#        return map, anti_floor
-#    return map
-
-class Map1:
+class Blink:
     def __init__(self):
-        self.map1 = pygame.transform.scale(load_image("карта_дом.png"), (
+        transporant = pygame.Surface((screen.get_size()))
+
+        for i in range(7):
+            transporant.set_alpha(100)
+            screen.blit(transporant, (0, 0))
+            pygame.display.flip()
+            pygame.time.wait(30)
+
+
+class ExampleMap:
+    def get_anti_floor(self):
+        return self.anti_floor
+
+    def get_map(self):
+        return self.load_map
+
+
+class Map1(ExampleMap):
+    def __init__(self):
+        self.load_map = pygame.transform.scale(load_image("карта_дом.png"), (
             pygame.display.get_surface().get_size()))
-        self.anti_floor = AntiFloor("пол_дом.png", self.map1)
-
-
-
+        self.anti_floor = AntiFloor("пол_дом.png", self.load_map)
 
         firentlmt = load_image("огонь.png")  # Fire not to load many times Огонь чтобы не загружать много раз
-        FireAnimation(firentlmt, 6, 1, self.map1.get_size()[0] // 4.8, self.map1.get_size()[1] // 1.6, coefficient=2)
-        FireAnimation(firentlmt, 6, 1, self.map1.get_size()[0] // 1.5, self.map1.get_size()[1] // 3.1, coefficient=3.5)
+        self.f1 = FireAnimation(firentlmt, 6, 1, self.load_map.get_size()[0] // 4.8, self.load_map.get_size()[1] // 1.6,
+                                coefficient=2)
+        self.f2 = FireAnimation(firentlmt, 6, 1, self.load_map.get_size()[0] // 1.5, self.load_map.get_size()[1] // 3.1,
+                                coefficient=3.5)
 
-        Fog(self.map1)
+        Fog(self.load_map)
 
         pygame.time.set_timer(pygame.USEREVENT + 1, 240)  # таймер для огня
         pygame.time.set_timer(pygame.USEREVENT + 2, 140)  # таймер для тумана
-
-    def get_map(self):
-        return self.map1
-
-    def get_anti_floor(self):
-        return self.anti_floor
 
     def update(self):
         fire_group.draw(screen)
         fog_group.draw(screen)
 
-    def player_check(self,player):
+    def player_check(self, player):
         global map
+        if player.rect.bottom > self.load_map.get_size()[1]:
+            Blink()
 
-        if player.rect.top>self.map1.get_size()[1]:
-            player.rect.top=0
-            player.rect.left=500
+            fog_group.empty()
 
-            map=Map2()
+            map = Map2()
 
-class Map2:
+            fire_group.empty()
+
+            player.rect.top = 0
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+                player.rect.left = map.get_map().get_size()[0] // 2
+
+
+class Map2(ExampleMap):
     def __init__(self):
-        self.map1 = pygame.transform.scale(load_image("карта_2.png"), (
+        self.load_map = pygame.transform.scale(load_image("карта_2.png"), (
             pygame.display.get_surface().get_size()))
-        self.anti_floor = AntiFloor("пол_карта_2.png", self.map1)
+        self.anti_floor = AntiFloor("пол_карта_2.png", self.load_map)
 
-    def get_anti_floor(self):
-        return self.anti_floor
-
-    def get_map(self):
-        return self.map1
+        Fog(self.load_map)
 
     def update(self):
-        pass
+        fog_group.draw(screen)
 
-    def player_check(self,player):
+    def player_check(self, player):
+        global map
 
-        if player.rect.top > self.map1.get_size()[1]:
-            pass
+        if player.rect.top < 0:  # карта 2 переход вверх на карту 1
+            Blink()
+
+            fog_group.empty()
+            map = Map1()
+
+            player.rect.bottom = map.get_map().get_size()[1]
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+                player.rect.left = map.get_map().get_size()[0] // 2
+
+        elif player.rect.bottom > self.load_map.get_size()[1]:  # карта 2 переход вниз на карту 3
+            Blink()
+
+            fog_group.empty()
+
+            map = Map3()
+            player.rect.top = 0
+
+            player.rect.left = map.get_map().get_size()[0] // 2
+
+
+class Map3(ExampleMap):
+    def __init__(self):
+        self.load_map = pygame.transform.scale(load_image("карта_3.png"), (
+            pygame.display.get_surface().get_size()))
+        self.anti_floor = AntiFloor("пол_карта_3.png", self.load_map)
+
+        Fog(self.load_map)
+
+    def update(self):
+        fog_group.draw(screen)
+
+    def player_check(self, player):
+        global map
+        if player.rect.top < 0:
+            Blink()
+
+            fog_group.empty()
+
+            map = Map2()
+
+            fire_group.empty()
+
+            player.rect.bottom = map.get_map().get_size()[1]
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+                player.rect.left = map.get_map().get_size()[0] // 2
+
 
 # -----------------------------------------------------------------------------------------------------------
 
-map=None
+map = None
+
+
 def start():
     global map
-    #map, anti_floor = maps_loader(map_name)
-    map=Map1()
-
-
+    map = Map1()
 
     running = True
     player = Player(500, 500)
@@ -225,12 +266,9 @@ def start():
 
         # ============================================================================================
 
-
         screen.blit(map.get_map(), (0, 0))
         player_group.draw(screen)
         map.update()
-
-
 
         pygame.display.flip()
 
