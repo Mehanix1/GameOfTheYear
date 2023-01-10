@@ -150,7 +150,7 @@ class Map1:
 
 class Map2:
     def __init__(self):
-        self.map1 = pygame.transform.scale(load_image("карта2.png"), (
+        self.map1 = pygame.transform.scale(load_image("карта_2.png"), (
             pygame.display.get_surface().get_size()))
         self.anti_floor = AntiFloor("пол_карта_2.png", self.map1)
 
