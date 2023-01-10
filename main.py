@@ -12,13 +12,14 @@ fog_group = pygame.sprite.Group()
 
 player_group = pygame.sprite.Group()
 
-
 FPS = 60
 
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
-#тест
-#тест2
+
+
+# тест
+# тест2
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -91,33 +92,91 @@ class Fog(pygame.sprite.Sprite):
             self.rect = self.rect.move((pygame.display.get_surface().get_size()[0] * 2.5, 0))
 
 
-def maps_loader(name_of_map):
-    map = pygame.transform.scale(load_image(name_of_map), (
-        pygame.display.get_surface().get_size()))  # Загрузать и изменить карту под размер окна
+#def maps_loader(name_of_map):
+#    map = pygame.transform.scale(load_image(name_of_map), (
+#        pygame.display.get_surface().get_size()))  # Загрузать и изменить карту под размер окна
+#
+#    if name_of_map == "карта_дом.png":
+#        pygame.time.set_timer(pygame.USEREVENT + 1, 240)  # таймер для огня
+#        pygame.time.set_timer(pygame.USEREVENT + 2, 140)  # таймер для тумана
+#
+#        anti_floor = AntiFloor("пол_дом.png", map)
+#
+#        firentlmt = load_image("огонь.png")  # Fire not to load many times Огонь чтобы не загружать много раз
+#        FireAnimation(firentlmt, 6, 1, map.get_size()[0] // 4.8, map.get_size()[1] // 1.6, coefficient=2)
+#        FireAnimation(firentlmt, 6, 1, map.get_size()[0] // 1.5, map.get_size()[1] // 3.1, coefficient=3.5)
+#
+#        Fog(map)
+#
+#        return map, anti_floor
+#    return map
 
-    if name_of_map == "карта_дом.png":
+class Map1:
+    def __init__(self):
+        self.map1 = pygame.transform.scale(load_image("карта_дом.png"), (
+            pygame.display.get_surface().get_size()))
+        self.anti_floor = AntiFloor("пол_дом.png", self.map1)
+
+
+
+
+        firentlmt = load_image("огонь.png")  # Fire not to load many times Огонь чтобы не загружать много раз
+        FireAnimation(firentlmt, 6, 1, self.map1.get_size()[0] // 4.8, self.map1.get_size()[1] // 1.6, coefficient=2)
+        FireAnimation(firentlmt, 6, 1, self.map1.get_size()[0] // 1.5, self.map1.get_size()[1] // 3.1, coefficient=3.5)
+
+        Fog(self.map1)
+
         pygame.time.set_timer(pygame.USEREVENT + 1, 240)  # таймер для огня
         pygame.time.set_timer(pygame.USEREVENT + 2, 140)  # таймер для тумана
 
-        anti_floor = AntiFloor("пол_дом.png", map)
+    def get_map(self):
+        return self.map1
 
-        firentlmt = load_image("огонь.png")  # Fire not to load many times Огонь чтобы не загружать много раз
-        FireAnimation(firentlmt, 6, 1, map.get_size()[0] // 4.8, map.get_size()[1] // 1.6, coefficient=2)
-        FireAnimation(firentlmt, 6, 1, map.get_size()[0] // 1.5, map.get_size()[1] // 3.1, coefficient=3.5)
+    def get_anti_floor(self):
+        return self.anti_floor
 
-        Fog(map)
+    def update(self):
+        fire_group.draw(screen)
+        fog_group.draw(screen)
 
-        return map, anti_floor
-    return map
+    def player_check(self,player):
+        global map
 
+        if player.rect.top>self.map1.get_size()[1]:
+            player.rect.top=0
+            player.rect.left=500
+
+            map=Map2()
+
+class Map2:
+    def __init__(self):
+        self.map1 = pygame.transform.scale(load_image("карта2.png"), (
+            pygame.display.get_surface().get_size()))
+        self.anti_floor = AntiFloor("пол_карта_2.png", self.map1)
+
+    def get_anti_floor(self):
+        return self.anti_floor
+
+    def get_map(self):
+        return self.map1
+
+    def update(self):
+        pass
+
+    def player_check(self,player):
+
+        if player.rect.top > self.map1.get_size()[1]:
+            pass
 
 # -----------------------------------------------------------------------------------------------------------
 
-
+map=None
 def start():
-    map, anti_floor = maps_loader('карта_дом.png')
+    global map
+    #map, anti_floor = maps_loader(map_name)
+    map=Map1()
 
-    screen.blit(map, (0, 0))
+
 
     running = True
     player = Player(500, 500)
@@ -140,36 +199,42 @@ def start():
         if pygame.key.get_pressed()[K_RIGHT] or pygame.key.get_pressed()[K_d]:
 
             player.rect.left += distance
-            if pygame.sprite.collide_mask(player, anti_floor):  # Если после того как
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):  # Если после того как
                 # персонаж прошёл, он соприкасается со стеной
                 player.rect.left -= distance  # то его отбросит назад
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_LEFT] or pygame.key.get_pressed()[K_a]:
             player.rect.left -= distance
-            if pygame.sprite.collide_mask(player, anti_floor):
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
                 player.rect.left += distance
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_UP] or pygame.key.get_pressed()[K_w]:
             player.rect.top -= distance
 
-            if pygame.sprite.collide_mask(player, anti_floor):
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
                 player.rect.top += distance
 
         # ------------------------------------------------------------------------------------------------
 
         if pygame.key.get_pressed()[K_DOWN] or pygame.key.get_pressed()[K_s]:
             player.rect.top += distance
-            if pygame.sprite.collide_mask(player, anti_floor):
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
                 player.rect.top -= distance
 
-        screen.blit(map, (0, 0))
+        # ============================================================================================
+
+
+        screen.blit(map.get_map(), (0, 0))
         player_group.draw(screen)
-        fire_group.draw(screen)
-        fog_group.draw(screen)
+        map.update()
+
+
 
         pygame.display.flip()
+
+        map.player_check(player)
 
         clock.tick(FPS)
         frame_delay = clock.tick(FPS) / 1000
