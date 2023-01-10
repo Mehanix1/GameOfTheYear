@@ -12,7 +12,6 @@ fog_group = pygame.sprite.Group()
 
 player_group = pygame.sprite.Group()
 
-
 FPS = 60
 
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -27,6 +26,37 @@ def load_image(name, colorkey=None):
         sys.exit()
     image = pygame.image.load(fullname)
     return image
+
+
+def start_screen():
+    intro_text = ["ЗАСТАВКА", "",
+                  "Правила игры",
+                  "Если в правилах несколько строк,",
+                  "приходится выводить их построчно"]
+
+    fon = pygame.transform.scale(load_image('fon.jpg'), (1920, 1080))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('white'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN or \
+                    event.type == pygame.MOUSEBUTTONDOWN:
+                return  # начинаем игру
+        pygame.display.flip()
+        clock.tick(FPS)
 
 
 class Player(pygame.sprite.Sprite):
@@ -54,7 +84,8 @@ class FireAnimation(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y, coefficient):
         super().__init__(fire_group, all_sprites)
         self.frames = []
-        sheet = pygame.transform.scale(sheet, (sheet.get_width() // coefficient, sheet.get_height() // coefficient))
+        sheet = pygame.transform.scale(sheet,
+                                       (int(sheet.get_width() // coefficient), int(sheet.get_height() // coefficient)))
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
         self.image = self.frames[self.cur_frame]
@@ -114,6 +145,7 @@ def maps_loader(name_of_map):
 
 
 def start():
+    start_screen()
     map, anti_floor = maps_loader('карта_дом.png')
 
     screen.blit(map, (0, 0))
