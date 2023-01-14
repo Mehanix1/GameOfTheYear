@@ -18,9 +18,6 @@ screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 
 
-# тест
-# тест2
-
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     # если файл не существует, то выходим
@@ -92,8 +89,14 @@ class Fog(pygame.sprite.Sprite):
             self.rect = self.rect.move((pygame.display.get_surface().get_size()[0] * 2.5, 0))
 
 
-class Blink:
-    def __init__(self):
+class ExampleMap:
+    def get_anti_floor(self):
+        return self.anti_floor
+
+    def get_map(self):
+        return self.load_map
+
+    def blink(self):
         transporant = pygame.Surface((screen.get_size()))
 
         for i in range(7):
@@ -102,13 +105,32 @@ class Blink:
             pygame.display.flip()
             pygame.time.wait(30)
 
+    def update(self):
+        pass
 
-class ExampleMap:
-    def get_anti_floor(self):
-        return self.anti_floor
+    def mtal(self, player: Player, load_map):  # Moving to another location / Переход на другую локацию
+        if player.rect.bottom > load_map.get_size()[1]:  # переход вниз
+            self.blink()
+            player.rect.top = 0
+            return "вниз"
 
-    def get_map(self):
-        return self.load_map
+        elif player.rect.top < 0:  # вверх
+            self.blink()
+            player.rect.bottom = load_map.get_size()[1]
+            return "вверх"
+
+        elif player.rect.left < 0:  # влево
+            self.blink()
+            player.rect.right = load_map.get_size()[0]
+            return "влево"
+
+        elif player.rect.right > load_map.get_size()[0]:  # вправо
+            self.blink()
+            player.rect.left = 0
+            return "вправо"
+
+        else:
+            return False
 
 
 class Map1(ExampleMap):
@@ -134,8 +156,8 @@ class Map1(ExampleMap):
 
     def player_check(self, player):
         global map
-        if player.rect.bottom > self.load_map.get_size()[1]:
-            Blink()
+        kuda = self.mtal(player, self.load_map)  # <--- получает напрвление движения и двигает пользователя
+        if kuda == "вниз":
 
             fog_group.empty()
 
@@ -143,7 +165,6 @@ class Map1(ExampleMap):
 
             fire_group.empty()
 
-            player.rect.top = 0
             if pygame.sprite.collide_mask(player, map.get_anti_floor()):
                 player.rect.left = map.get_map().get_size()[0] // 2
 
@@ -162,25 +183,39 @@ class Map2(ExampleMap):
     def player_check(self, player):
         global map
 
-        if player.rect.top < 0:  # карта 2 переход вверх на карту 1
-            Blink()
-
+        kuda = self.mtal(player, self.load_map)
+        if kuda == "вверх":  # карта 2 переход вверх на карту 1
             fog_group.empty()
             map = Map1()
 
-            player.rect.bottom = map.get_map().get_size()[1]
             if pygame.sprite.collide_mask(player, map.get_anti_floor()):
                 player.rect.left = map.get_map().get_size()[0] // 2
 
-        elif player.rect.bottom > self.load_map.get_size()[1]:  # карта 2 переход вниз на карту 3
-            Blink()
+        elif kuda == "вниз":  # карта 2 переход вниз на карту 3
 
             fog_group.empty()
 
             map = Map3()
-            player.rect.top = 0
 
-            player.rect.left = map.get_map().get_size()[0] // 2
+
+        elif kuda == "влево":  # карта 2 переход влево на карту 4
+
+            fog_group.empty()
+
+            map = Map4()
+            player.rect.right = map.get_map().get_size()[0]
+
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+                player.rect.top = map.get_map().get_size()[1] // 4
+
+        elif kuda == "вправо":  # карта 2 переход влево на карту 4
+
+            fog_group.empty()
+
+            map = Map6()
+
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+                player.rect.top = map.get_map().get_size()[1] // 4
 
 
 class Map3(ExampleMap):
@@ -196,18 +231,82 @@ class Map3(ExampleMap):
 
     def player_check(self, player):
         global map
-        if player.rect.top < 0:
-            Blink()
+        kuda = self.mtal(player, self.load_map)
 
+        if kuda == "вверх":
+            fog_group.empty()
+
+            map = Map2()
+
+            fire_group.empty()
+            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+                player.rect.left = map.get_map().get_size()[0] // 2
+
+
+class Map4(ExampleMap):
+    def __init__(self):
+        self.load_map = pygame.transform.scale(load_image("карта_4.png"), (
+            pygame.display.get_surface().get_size()))
+        self.anti_floor = AntiFloor("пол_карта_4.png", self.load_map)
+
+        Fog(self.load_map)
+
+    def update(self):
+        fog_group.draw(screen)
+
+    def player_check(self, player):
+        global map
+        kuda = self.mtal(player, self.load_map)
+
+        if kuda == "вправо":
             fog_group.empty()
 
             map = Map2()
 
             fire_group.empty()
 
-            player.rect.bottom = map.get_map().get_size()[1]
             if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                player.rect.left = map.get_map().get_size()[0] // 2
+                player.rect.top = map.get_map().get_size()[1] // 3
+
+
+class Map6(ExampleMap):
+    def __init__(self):
+        self.load_map = pygame.transform.scale(load_image("карта_6.png"), (
+            pygame.display.get_surface().get_size()))
+        self.anti_floor = AntiFloor("пол_карта_6.png", self.load_map)
+
+        Fog(self.load_map)
+
+    def update(self):
+        fog_group.draw(screen)
+
+    def player_check(self, player):
+        global map
+        kuda = self.mtal(player, self.load_map)
+
+        if kuda == "влево":
+            fog_group.empty()
+
+            map = Map2()
+
+            fire_group.empty()
+
+        try:
+            if kuda == "вправо":
+                fog_group.empty()
+
+                map = Map7()
+
+                fire_group.empty()
+
+                player.rect.left = 0
+                if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+                    player.rect.top = map.get_map().get_size()[1] // 3
+        except:
+            print("УРОВЕНЬ НЕ ДОСТРОЕН")
+
+
+# УРОВЕНЬ ГДЕ КАРТА ДОЛЖНА СЛЕДОВАТЬ ЗА ПЕРСОНАЖЕМ
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -216,11 +315,18 @@ map = None
 
 
 def start():
+    pygame.mixer.music.load("data/music.mp3")
+    pygame.mixer.music.play(loops=-1)
+    pygame.mixer.music.set_volume(0.5)
+
     global map
     map = Map1()
 
     running = True
-    player = Player(500, 500)
+
+    size = pygame.display.get_surface().get_size()
+    player = Player(size[0] // 2, size[1] // 2)
+
     velocity = 901
     frame_delay = 0
 
