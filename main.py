@@ -1,7 +1,10 @@
 import os
 import sys
+import time as tm
+
 import pygame
 from pygame.locals import *  # это добавляет обработку клавиш
+from datetime import *
 
 pygame.init()
 
@@ -29,6 +32,7 @@ def load_image(name, colorkey=None):
 
 
 def start_screen():
+    global start_time
     intro_text = ["ЗАСТАВКА", "",
                   "Правила игры",
                   "Если в правилах несколько строк,",
@@ -54,9 +58,29 @@ def start_screen():
                 sys.exit()
             elif event.type == pygame.KEYDOWN or \
                     event.type == pygame.MOUSEBUTTONDOWN:
+                start_time = datetime.now()
                 return  # начинаем игру
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def final_screen():
+    end_time = datetime.now()
+    playing_time = end_time - start_time
+    outro_text = ['ИГРА ОКОНЧЕНА', '',
+                  f'Потрачено {playing_time.seconds} сек.']
+    fon = pygame.transform.scale(load_image('fon.jpg'), (1920, 1080))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in outro_text:
+        string_rendered = font.render(line, 1, pygame.Color('white'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
 
 
 class Player(pygame.sprite.Sprite):
@@ -403,6 +427,11 @@ def start():
             player.rect.top += distance
             if pygame.sprite.collide_mask(player, map.get_anti_floor()):
                 player.rect.top -= distance
+
+        # ============================================================================================
+
+        if pygame.key.get_pressed()[K_f]:
+            final_screen()
 
         # ============================================================================================
 
