@@ -220,7 +220,7 @@ class MapBase(pygame.sprite.Sprite):
 
 
     def move_player_to_another_map(self, player: Player, where: str) -> None:
-        print(map.rect,player.rect,player.rect.right)
+
         if where == "вниз":
             player.rect.top = map.rect.top
         elif where == "вверх":
@@ -283,7 +283,6 @@ class Map2(MapBase):
             fog_group.empty()
 
             object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map3()
 
@@ -291,16 +290,12 @@ class Map2(MapBase):
             object_group.remove(*fog_group)
             fog_group.empty()
 
-            object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map1()
         elif where == "влево":
             object_group.remove(*fog_group)
             fog_group.empty()
 
-            object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map4()
 
@@ -308,9 +303,6 @@ class Map2(MapBase):
         elif where == "вправо":
             object_group.remove(*fog_group)
             fog_group.empty()
-
-            object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map6()
         else:
@@ -333,10 +325,7 @@ class Map3(MapBase):
 
         if where == "вверх":
             object_group.remove(*fog_group)
-            fog_group.empty()
 
-            object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map2()
         else:
@@ -361,8 +350,6 @@ class Map4(MapBase):
             object_group.remove(*fog_group)
             fog_group.empty()
 
-            object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map2()
         else:
@@ -387,16 +374,12 @@ class Map6(MapBase):
             object_group.remove(*fog_group)
             fog_group.empty()
 
-            object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map2()
         elif where == "вправо":
             object_group.remove(*fog_group)
             fog_group.empty()
 
-            object_group.remove(*fire_group)
-            fire_group.empty()
 
             map = Map7()
         else:
@@ -420,16 +403,40 @@ class Map7(MapBase):
             object_group.remove(*fog_group)
             fog_group.empty()
 
-            object_group.remove(*fire_group)
-            fire_group.empty()
-
             map = Map6()
+
+        elif where == "вправо":
+            object_group.remove(*fog_group)
+            fog_group.empty()
+
+            map = Map8()
         else:
             return
         self.change_location(where, map, player)
 
 
-# УРОВЕНЬ ГДЕ КАРТА ДОЛЖНА СЛЕДОВАТЬ ЗА ПЕРСОНАЖЕМ
+class Map8(MapBase):
+    def __init__(self):
+        map_image = load_image("карта_8.png")
+        self.is_map_is_big = True
+        super().__init__(map_image)
+        self.anti_floor = AntiFloor("пол_карта_8.png", self.image)
+
+
+
+    def player_check(self, player):
+        global map
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
+
+        if where == "влево":
+            object_group.remove(*fog_group)
+            fog_group.empty()
+
+
+            map = Map7()
+        else:
+            return
+        self.change_location(where, map, player)
 
 
 # -----------------------------------------------------------------------------------------------------------
