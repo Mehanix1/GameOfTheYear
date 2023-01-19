@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import sys
 import pygame
@@ -6,6 +7,8 @@ from pygame.locals import *  # это добавляет обработку кл
 pygame.init()
 
 all_sprites = pygame.sprite.Group()
+map_group = pygame.sprite.Group()
+object_group = pygame.sprite.Group()
 anti_floor_group = pygame.sprite.Group()
 fire_group = pygame.sprite.Group()
 fog_group = pygame.sprite.Group()
@@ -29,10 +32,12 @@ def load_image(name, colorkey=None):
 
 
 def start_screen():
-    intro_text = ["ЗАСТАВКА", "",
-                  "Правила игры",
-                  "Если в правилах несколько строк,",
-                  "приходится выводить их построчно"]
+    intro_text = ["Добро пожаловать", "",
+                  "Для выхода нажмите Esc",
+                  "...",
+                  "тут надо чё-нить написать",
+                  "Типо самая крутая игра. бла-бла-бла, ну вы поняли",
+                  ]
 
     fon = pygame.transform.scale(load_image('fon.jpg'), (1920, 1080))
     screen.blit(fon, (0, 0))
@@ -61,7 +66,7 @@ def start_screen():
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
-        super().__init__(player_group, all_sprites)
+        super().__init__(player_group, object_group, all_sprites)
         self.image = load_image("player.png")
         self.rect = self.image.get_rect().move(pos_x, pos_y)
 
@@ -69,20 +74,21 @@ class Player(pygame.sprite.Sprite):
 class AntiFloor(pygame.sprite.Sprite):
     def __init__(self, name_of_map, map):
         super().__init__(anti_floor_group, all_sprites)
-        self.image = load_image(name_of_map)
+        self.image = pygame.Surface((0, 0))
+        anti_floor_image = load_image(name_of_map)
 
-        self.image = pygame.transform.scale(self.image, (
+        anti_floor_image = pygame.transform.scale(anti_floor_image, (
             map.get_size()))
 
-        self.mask = pygame.mask.from_surface(self.image)  # Берётся маска пола
+        self.mask = pygame.mask.from_surface(anti_floor_image)  # Берётся маска пола
         self.mask.invert()  # маска пола превращается в маску НЕ ПОЛА, т.е. в маску стен
 
-        self.rect = self.image.get_rect().move(0, 0)
+        self.rect = anti_floor_image.get_rect().move(0, 0)
 
 
 class FireAnimation(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y, coefficient):
-        super().__init__(fire_group, all_sprites)
+        super().__init__(fire_group, object_group, all_sprites)
         self.frames = []
         sheet = pygame.transform.scale(sheet,
                                        (int(sheet.get_width() // coefficient), int(sheet.get_height() // coefficient)))
@@ -100,14 +106,16 @@ class FireAnimation(pygame.sprite.Sprite):
                 self.frames.append(sheet.subsurface(pygame.Rect(
                     frame_location, self.rect.size)))
 
-    def update(self):
+    def update(self, tick_animation=False):
+        if not tick_animation:
+            return
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
 
 
 class Fog(pygame.sprite.Sprite):
     def __init__(self, map):
-        super().__init__(fog_group, all_sprites)
+        super().__init__(fog_group, object_group, all_sprites)
 
         self.image = load_image("туман_дом.png")
         self.image = pygame.transform.scale(self.image,
@@ -115,18 +123,39 @@ class Fog(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect()
 
-    def update(self):
+    def update(self, tick_animation=False):
+        if not tick_animation:
+            return
         self.rect.left -= 1  # движение тумана
         if self.rect.right < 0:  # телепортация
             self.rect = self.rect.move((pygame.display.get_surface().get_size()[0] * 2.5, 0))
 
 
-class ExampleMap:
+class Camera:
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    def update(self, target):
+        self.dx = round(screen.get_size()[0] / 2 - target.rect.x - target.rect.w / 2)
+        self.dy = round(screen.get_size()[1] / 2 - target.rect.y - target.rect.h / 2)
+
+
+class MapBase(pygame.sprite.Sprite):
+    def __init__(self, map_image: pygame.Surface) -> None:
+        super().__init__(map_group, all_sprites)
+        self.image = pygame.transform.scale(map_image, pygame.display.get_surface().get_size())
+        self.rect = self.image.get_rect()
+
     def get_anti_floor(self):
         return self.anti_floor
 
-    def get_map(self):
-        return self.load_map
+    def get_if_map_is_big(self):
+        return self.is_map_is_big
 
     def blink(self):
         transporant = pygame.Surface((screen.get_size()))
@@ -137,205 +166,233 @@ class ExampleMap:
             pygame.display.flip()
             pygame.time.wait(30)
 
-    def update(self):
-        pass
-
-    def mtal(self, player: Player, load_map):  # Moving to another location / Переход на другую локацию
-        if player.rect.bottom > load_map.get_size()[1]:  # переход вниз
-            self.blink()
-            player.rect.top = 0
+    def collide_map_border(self, player: Player):  # Moving to another location / Переход на другую локацию
+        if player.rect.bottom > self.rect.bottom:  # переход вниз
             return "вниз"
-
-        elif player.rect.top < 0:  # вверх
-            self.blink()
-            player.rect.bottom = load_map.get_size()[1]
+        if player.rect.top < self.rect.y:  # вверх
             return "вверх"
-
-        elif player.rect.left < 0:  # влево
-            self.blink()
-            player.rect.right = load_map.get_size()[0]
+        if player.rect.left < self.rect.x:  # влево
             return "влево"
-
-        elif player.rect.right > load_map.get_size()[0]:  # вправо
-            self.blink()
-            player.rect.left = 0
+        if player.rect.right > self.rect.right:  # вправо
             return "вправо"
+        return None
 
-        else:
-            return False
+    def change_location(self, where: str | None, new_map: MapBase, player: Player):
+        if not where:
+            return
+
+        self.blink()
+        self.move_player_to_another_map(player, where)
 
 
-class Map1(ExampleMap):
+    def move_player_to_another_map(self, player: Player, where: str) -> None:
+        print(map.rect,player.rect,player.rect.right)
+        if where == "вниз":
+            player.rect.top = map.rect.top
+        elif where == "вверх":
+            player.rect.bottom = map.rect.bottom
+        elif where == "влево":
+            player.rect.right = map.rect.right
+        elif where == "вправо":
+            player.rect.left = map.rect.left
+
+
+class Map1(MapBase):
     def __init__(self):
-        self.load_map = pygame.transform.scale(load_image("карта_дом.png"), (
-            pygame.display.get_surface().get_size()))
-        self.anti_floor = AntiFloor("пол_дом.png", self.load_map)
+        map_image = load_image("карта_дом.png")
+        super().__init__(map_image)
+        self.is_map_is_big = False
+        self.anti_floor = AntiFloor("пол_дом.png", self.image)
 
         firentlmt = load_image("огонь.png")  # Fire not to load many times Огонь чтобы не загружать много раз
-        self.f1 = FireAnimation(firentlmt, 6, 1, self.load_map.get_size()[0] // 4.8, self.load_map.get_size()[1] // 1.6,
+        self.f1 = FireAnimation(firentlmt, 6, 1, self.image.get_size()[0] // 4.8, self.image.get_size()[1] // 1.6,
                                 coefficient=2)
-        self.f2 = FireAnimation(firentlmt, 6, 1, self.load_map.get_size()[0] // 1.5, self.load_map.get_size()[1] // 3.1,
+        self.f2 = FireAnimation(firentlmt, 6, 1, self.image.get_size()[0] // 1.5, self.image.get_size()[1] // 3.1,
                                 coefficient=3.5)
 
-        Fog(self.load_map)
+        Fog(self.image)
 
-        pygame.time.set_timer(pygame.USEREVENT + 1, 240)  # таймер для огня
-        pygame.time.set_timer(pygame.USEREVENT + 2, 140)  # таймер для тумана
-
-    def update(self):
-        fire_group.draw(screen)
-        fog_group.draw(screen)
+        pygame.time.set_timer(FIRE_ANIMATE_EVENT, 240)  # таймер для огня
+        pygame.time.set_timer(FOG_ANIMATE_EVENT, 140)  # таймер для тумана
 
     def player_check(self, player):
         global map
-        kuda = self.mtal(player, self.load_map)  # <--- получает напрвление движения и двигает пользователя
-        if kuda == "вниз":
-
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
+        if where == "вниз":
+            object_group.remove(*fog_group)
             fog_group.empty()
 
-            map = Map2()
-
+            object_group.remove(*fire_group)
             fire_group.empty()
 
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                player.rect.left = map.get_map().get_size()[0] // 2
+            map = Map2()
+        else:
+            return
+        self.change_location(where, map, player)
 
 
-class Map2(ExampleMap):
+class Map2(MapBase):
     def __init__(self):
-        self.load_map = pygame.transform.scale(load_image("карта_2.png"), (
-            pygame.display.get_surface().get_size()))
-        self.anti_floor = AntiFloor("пол_карта_2.png", self.load_map)
+        map_image = load_image("карта_2.png")
+        super().__init__(map_image)
+        self.anti_floor = AntiFloor("пол_карта_2.png", self.image)
+        self.is_map_is_big = False
 
-        Fog(self.load_map)
-
-    def update(self):
-        fog_group.draw(screen)
+        Fog(self.image)
 
     def player_check(self, player):
         global map
 
-        kuda = self.mtal(player, self.load_map)
-        if kuda == "вверх":  # карта 2 переход вверх на карту 1
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
+        if where == "вниз":
+            object_group.remove(*fog_group)
             fog_group.empty()
-            map = Map1()
 
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                player.rect.left = map.get_map().get_size()[0] // 2
-
-        elif kuda == "вниз":  # карта 2 переход вниз на карту 3
-
-            fog_group.empty()
+            object_group.remove(*fire_group)
+            fire_group.empty()
 
             map = Map3()
 
-
-        elif kuda == "влево":  # карта 2 переход влево на карту 4
-
+        elif where == "вверх":
+            object_group.remove(*fog_group)
             fog_group.empty()
+
+            object_group.remove(*fire_group)
+            fire_group.empty()
+
+            map = Map1()
+        elif where == "влево":
+            object_group.remove(*fog_group)
+            fog_group.empty()
+
+            object_group.remove(*fire_group)
+            fire_group.empty()
 
             map = Map4()
-            player.rect.right = map.get_map().get_size()[0]
 
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                player.rect.top = map.get_map().get_size()[1] // 4
 
-        elif kuda == "вправо":  # карта 2 переход влево на карту 4
-
+        elif where == "вправо":
+            object_group.remove(*fog_group)
             fog_group.empty()
+
+            object_group.remove(*fire_group)
+            fire_group.empty()
 
             map = Map6()
+        else:
+            return
+        self.change_location(where, map, player)
 
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                player.rect.top = map.get_map().get_size()[1] // 4
 
-
-class Map3(ExampleMap):
+class Map3(MapBase):
     def __init__(self):
-        self.load_map = pygame.transform.scale(load_image("карта_3.png"), (
-            pygame.display.get_surface().get_size()))
-        self.anti_floor = AntiFloor("пол_карта_3.png", self.load_map)
+        map_image = load_image("карта_3.png")
+        super().__init__(map_image)
+        self.anti_floor = AntiFloor("пол_карта_3.png", self.image)
+        self.is_map_is_big = False
 
-        Fog(self.load_map)
-
-    def update(self):
-        fog_group.draw(screen)
+        Fog(self.image)
 
     def player_check(self, player):
         global map
-        kuda = self.mtal(player, self.load_map)
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
 
-        if kuda == "вверх":
+        if where == "вверх":
+            object_group.remove(*fog_group)
             fog_group.empty()
 
-            map = Map2()
-
+            object_group.remove(*fire_group)
             fire_group.empty()
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                player.rect.left = map.get_map().get_size()[0] // 2
+
+            map = Map2()
+        else:
+            return
+        self.change_location(where, map, player)
 
 
-class Map4(ExampleMap):
+class Map4(MapBase):
     def __init__(self):
-        self.load_map = pygame.transform.scale(load_image("карта_4.png"), (
-            pygame.display.get_surface().get_size()))
-        self.anti_floor = AntiFloor("пол_карта_4.png", self.load_map)
+        map_image = load_image("карта_4.png")
+        super().__init__(map_image)
+        self.anti_floor = AntiFloor("пол_карта_4.png", self.image)
+        self.is_map_is_big = False
 
-        Fog(self.load_map)
-
-    def update(self):
-        fog_group.draw(screen)
+        Fog(self.image)
 
     def player_check(self, player):
         global map
-        kuda = self.mtal(player, self.load_map)
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
 
-        if kuda == "вправо":
+        if where == "вправо":
+            object_group.remove(*fog_group)
             fog_group.empty()
 
-            map = Map2()
-
+            object_group.remove(*fire_group)
             fire_group.empty()
 
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                player.rect.top = map.get_map().get_size()[1] // 3
+            map = Map2()
+        else:
+            return
+        self.change_location(where, map, player)
 
 
-class Map6(ExampleMap):
+class Map6(MapBase):
     def __init__(self):
-        self.load_map = pygame.transform.scale(load_image("карта_6.png"), (
-            pygame.display.get_surface().get_size()))
-        self.anti_floor = AntiFloor("пол_карта_6.png", self.load_map)
+        map_image = load_image("карта_6.png")
+        super().__init__(map_image)
+        self.anti_floor = AntiFloor("пол_карта_6.png", self.image)
+        self.is_map_is_big = False
 
-        Fog(self.load_map)
-
-    def update(self):
-        fog_group.draw(screen)
+        Fog(self.image)
 
     def player_check(self, player):
         global map
-        kuda = self.mtal(player, self.load_map)
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
 
-        if kuda == "влево":
+        if where == "влево":
+            object_group.remove(*fog_group)
             fog_group.empty()
 
-            map = Map2()
-
+            object_group.remove(*fire_group)
             fire_group.empty()
 
-        try:
-            if kuda == "вправо":
-                fog_group.empty()
+            map = Map2()
+        elif where == "вправо":
+            object_group.remove(*fog_group)
+            fog_group.empty()
 
-                map = Map7()
+            object_group.remove(*fire_group)
+            fire_group.empty()
 
-                fire_group.empty()
+            map = Map7()
+        else:
+            return
+        self.change_location(where, map, player)
 
-                player.rect.left = 0
-                if pygame.sprite.collide_mask(player, map.get_anti_floor()):
-                    player.rect.top = map.get_map().get_size()[1] // 3
-        except:
-            print("УРОВЕНЬ НЕ ДОСТРОЕН")
+class Map7(MapBase):
+    def __init__(self):
+        map_image = load_image("карта_7.png")
+        self.is_map_is_big = True
+        super().__init__(map_image)
+        self.anti_floor = AntiFloor("пол_карта_7.png", self.image)
+
+
+
+    def player_check(self, player):
+        global map
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
+
+        if where == "влево":
+            object_group.remove(*fog_group)
+            fog_group.empty()
+
+            object_group.remove(*fire_group)
+            fire_group.empty()
+
+            map = Map6()
+        else:
+            return
+        self.change_location(where, map, player)
 
 
 # УРОВЕНЬ ГДЕ КАРТА ДОЛЖНА СЛЕДОВАТЬ ЗА ПЕРСОНАЖЕМ
@@ -344,6 +401,9 @@ class Map6(ExampleMap):
 # -----------------------------------------------------------------------------------------------------------
 
 map = None
+
+FIRE_ANIMATE_EVENT = pygame.USEREVENT + 1
+FOG_ANIMATE_EVENT = pygame.USEREVENT + 2
 
 
 def start():
@@ -364,55 +424,65 @@ def start():
     velocity = 901
     frame_delay = 0
 
+    camera = Camera()
+
     while running:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[K_ESCAPE]:
                 running = False
-            elif event.type == pygame.USEREVENT + 1:
-                fire_group.update()
-            elif event.type == pygame.USEREVENT + 2:
-
-                fog_group.update()
+            elif event.type == FIRE_ANIMATE_EVENT:
+                fire_group.update(tick_animation=True)
+            elif event.type == FOG_ANIMATE_EVENT:
+                fog_group.update(tick_animation=True)
 
         # ------------------------------------------------------------------------------------------------
         distance = int(velocity * frame_delay)
         if pygame.key.get_pressed()[K_RIGHT] or pygame.key.get_pressed()[K_d]:
-
             player.rect.left += distance
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):  # Если после того как
+            are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
+            if are_colliding_anti_floor:  # Если после того как
                 # персонаж прошёл, он соприкасается со стеной
                 player.rect.left -= distance  # то его отбросит назад
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_LEFT] or pygame.key.get_pressed()[K_a]:
             player.rect.left -= distance
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+            are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
+            if are_colliding_anti_floor:
                 player.rect.left += distance
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_UP] or pygame.key.get_pressed()[K_w]:
             player.rect.top -= distance
-
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+            are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
+            if are_colliding_anti_floor:
                 player.rect.top += distance
 
         # ------------------------------------------------------------------------------------------------
 
         if pygame.key.get_pressed()[K_DOWN] or pygame.key.get_pressed()[K_s]:
             player.rect.top += distance
-            if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+            are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
+            if are_colliding_anti_floor:
                 player.rect.top -= distance
 
         # ============================================================================================
 
-        screen.blit(map.get_map(), (0, 0))
-        player_group.draw(screen)
-        map.update()
-
-        pygame.display.flip()
+        all_sprites.update()
 
         map.player_check(player)
+
+        if map.get_if_map_is_big():
+            camera.update(player)
+            for sprite in all_sprites:
+                camera.apply(sprite)
+
+        screen.fill('black')
+        map_group.draw(screen)
+        object_group.draw(screen)
+
+        pygame.display.flip()
 
         clock.tick(FPS)
         frame_delay = clock.tick(FPS) / 1000
