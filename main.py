@@ -180,10 +180,14 @@ class Camera:
 
 
 class MapBase(pygame.sprite.Sprite):
-    def __init__(self, map_image: pygame.Surface) -> None:
+    def __init__(self, map_image: pygame.Surface, map_name=None) -> None:
         super().__init__(map_group, all_sprites)
         self.image = pygame.transform.scale(map_image, pygame.display.get_surface().get_size())
         self.rect = self.image.get_rect()
+        self.map_name = map_name
+
+    def get_map_name(self):
+        return self.map_name
 
     def get_anti_floor(self):
         return self.anti_floor
@@ -212,12 +216,13 @@ class MapBase(pygame.sprite.Sprite):
         return None
 
     def change_location(self, where: str | None, new_map: MapBase, player: Player):
+        global map
         if not where:
             return
 
         self.blink()
         self.move_player_to_another_map(player, where)
-
+        self.logging(new_map)
 
     def move_player_to_another_map(self, player: Player, where: str) -> None:
 
@@ -230,11 +235,17 @@ class MapBase(pygame.sprite.Sprite):
         elif where == "вправо":
             player.rect.left = map.rect.left
 
+    def logging(self, new_map):
+        file = open('logs.txt', 'a', encoding='utf-8')
+        file.write(f'{datetime.now()} перешёл на "{new_map.get_map_name()}" \n')
+        file.close()
+
 
 class Map1(MapBase):
     def __init__(self):
+
         map_image = load_image("карта_дом.png")
-        super().__init__(map_image)
+        super().__init__(map_image,"карта 1")
         self.is_map_is_big = False
         self.anti_floor = AntiFloor("пол_дом.png", self.image)
 
@@ -259,6 +270,8 @@ class Map1(MapBase):
             object_group.remove(*fire_group)
             fire_group.empty()
 
+            map_group.remove(map)
+
             map = Map2()
         else:
             return
@@ -268,7 +281,7 @@ class Map1(MapBase):
 class Map2(MapBase):
     def __init__(self):
         map_image = load_image("карта_2.png")
-        super().__init__(map_image)
+        super().__init__(map_image,"карта2")
         self.anti_floor = AntiFloor("пол_карта_2.png", self.image)
         self.is_map_is_big = False
 
@@ -284,25 +297,31 @@ class Map2(MapBase):
 
             object_group.remove(*fire_group)
 
+            map_group.remove(map)
+
             map = Map3()
 
         elif where == "вверх":
             object_group.remove(*fog_group)
             fog_group.empty()
 
+            map_group.remove(map)
 
             map = Map1()
         elif where == "влево":
             object_group.remove(*fog_group)
             fog_group.empty()
 
+            map_group.remove(map)
 
             map = Map4()
 
 
         elif where == "вправо":
+
             object_group.remove(*fog_group)
             fog_group.empty()
+            map_group.remove(map)
 
             map = Map6()
         else:
@@ -326,6 +345,7 @@ class Map3(MapBase):
         if where == "вверх":
             object_group.remove(*fog_group)
 
+            map_group.remove(map)
 
             map = Map2()
         else:
@@ -350,6 +370,7 @@ class Map4(MapBase):
             object_group.remove(*fog_group)
             fog_group.empty()
 
+            map_group.remove(map)
 
             map = Map2()
         else:
@@ -374,26 +395,28 @@ class Map6(MapBase):
             object_group.remove(*fog_group)
             fog_group.empty()
 
-
+            map_group.remove(map)
             map = Map2()
         elif where == "вправо":
             object_group.remove(*fog_group)
             fog_group.empty()
 
-
+            map_group.remove(map)
             map = Map7()
         else:
             return
         self.change_location(where, map, player)
 
+
 class Map7(MapBase):
     def __init__(self):
         map_image = load_image("карта_7.png")
-        self.is_map_is_big = True
         super().__init__(map_image)
+        self.image = map_image
+        self.rect = self.image.get_rect()
+
         self.anti_floor = AntiFloor("пол_карта_7.png", self.image)
-
-
+        self.is_map_is_big = True
 
     def player_check(self, player):
         global map
@@ -403,12 +426,13 @@ class Map7(MapBase):
             object_group.remove(*fog_group)
             fog_group.empty()
 
+            map_group.remove(map)
             map = Map6()
 
         elif where == "вправо":
             object_group.remove(*fog_group)
             fog_group.empty()
-
+            map_group.remove(map)
             map = Map8()
         else:
             return
@@ -420,9 +444,10 @@ class Map8(MapBase):
         map_image = load_image("карта_8.png")
         self.is_map_is_big = True
         super().__init__(map_image)
+        self.image = map_image
+        self.rect = self.image.get_rect()
+
         self.anti_floor = AntiFloor("пол_карта_8.png", self.image)
-
-
 
     def player_check(self, player):
         global map
@@ -431,7 +456,7 @@ class Map8(MapBase):
         if where == "влево":
             object_group.remove(*fog_group)
             fog_group.empty()
-
+            map_group.remove(map)
 
             map = Map7()
         else:
@@ -440,7 +465,7 @@ class Map8(MapBase):
 
 
 # -----------------------------------------------------------------------------------------------------------
-
+# записать начало новой игры в логи
 map = None
 
 FIRE_ANIMATE_EVENT = pygame.USEREVENT + 1
