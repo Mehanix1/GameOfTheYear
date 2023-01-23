@@ -101,7 +101,7 @@ def final_screen():
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, object_group, all_sprites)
-        self.image = load_image("idle.png")
+        self.image = load_image("player.png")
         self.rect = self.image.get_rect().move(pos_x, pos_y)
 
 
@@ -236,8 +236,9 @@ class MapBase(pygame.sprite.Sprite):
             player.rect.left = map.rect.left
 
     def logging(self, new_map):
-        with open('logs.txt', 'a', encoding='utf-8') as file:
-            file.write(f'{datetime.now()} перешёл на "{new_map.get_map_name()}" \n')
+        file = open('logs.txt', 'a', encoding='utf-8')
+        file.write(f'{datetime.now()} перешёл на "{new_map.get_map_name()}" \n')
+        file.close()
 
 
 class Map1(MapBase):
@@ -464,8 +465,7 @@ class Map8(MapBase):
 
 
 # -----------------------------------------------------------------------------------------------------------
-with open('logs.txt', 'a', encoding='utf-8') as file:
-    file.write(f'\nначата новая игра\n')
+# записать начало новой игры в логи
 map = None
 
 FIRE_ANIMATE_EVENT = pygame.USEREVENT + 1
@@ -505,7 +505,6 @@ def start():
         # ------------------------------------------------------------------------------------------------
         distance = int(velocity * frame_delay)
         if pygame.key.get_pressed()[K_RIGHT] or pygame.key.get_pressed()[K_d]:
-            player.image = load_image("r_walk.png")
             player.rect.left += distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
             if are_colliding_anti_floor:  # Если после того как
@@ -514,7 +513,6 @@ def start():
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_LEFT] or pygame.key.get_pressed()[K_a]:
-            player.image = load_image("l_walk.png")
             player.rect.left -= distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
             if are_colliding_anti_floor:
@@ -522,7 +520,6 @@ def start():
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_UP] or pygame.key.get_pressed()[K_w]:
-            player.image = load_image('u_walk.png')
             player.rect.top -= distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
             if are_colliding_anti_floor:
@@ -531,7 +528,6 @@ def start():
         # ------------------------------------------------------------------------------------------------
 
         if pygame.key.get_pressed()[K_DOWN] or pygame.key.get_pressed()[K_s]:
-            player.image = load_image('d_walk.png')
             player.rect.top += distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
             if are_colliding_anti_floor:
