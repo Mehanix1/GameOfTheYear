@@ -183,7 +183,7 @@ class Fog(pygame.sprite.Sprite):
 
         self.image = load_image("туман_дом.png")
         self.image = pygame.transform.scale(self.image,
-                                            (self.image.get_width(), map.get_size())[1])
+                                            (self.image.get_width(), map.get_size()[1]))
 
         self.rect = self.image.get_rect()
 
@@ -562,9 +562,6 @@ class Map9(MapBase):
             if where == 'вниз':
                 player.rect.x = map.rect.width/2
 
-
-
-
 # -----------------------------------------------------------------------------------------------------------
 with open('logs.txt', 'a', encoding='utf-8') as file:
     file.write(f'\nначата новая игра\n')
@@ -582,7 +579,7 @@ def start():
     pygame.mixer.music.set_volume(0.5)
 
     global map
-    map = Map8()
+    map = Map1()
 
     running = True
 
@@ -646,9 +643,6 @@ def start():
         # ============================================================================================
 
         all_sprites.update()
-        #rint("---------------")
-        #rint(player.rect.x,player.rect.y)
-        #rint(map.rect.x,map.rect.y)
         map.player_check(player)
 
         if map.get_if_map_is_big():
