@@ -1,8 +1,6 @@
 from __future__ import annotations
 import os
 import sys
-import time as tm
-
 import pygame
 from pygame.locals import *  # это добавляет обработку клавиш
 from datetime import *
