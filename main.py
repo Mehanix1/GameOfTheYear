@@ -72,8 +72,8 @@ def start_screen():
 def final_screen():
     end_time = datetime.now()
     playing_time = end_time - start_time
-    outro_text = ['ИГРА ОКОНЧЕНА', '',
-                  f'Потрачено {playing_time.seconds} сек.']
+    outro_text = ['ИГРА ОКОНЧЕНА',
+                  f'Проведено с пользой {playing_time.seconds} сек.','Для выхода нажмите Esc',]
     fon = pygame.transform.scale(load_image('fon.jpg'), (1920, 1080))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
@@ -86,23 +86,53 @@ def final_screen():
         intro_rect.x = 10
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
+    pygame.display.flip()
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or pygame.key.get_pressed()[K_ESCAPE]:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
-        pygame.display.flip()
-        clock.tick(FPS)
 
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, object_group, all_sprites)
-        self.image = load_image("idle.png")
+
+        self.kx, self.ky = int(map.width /17), int(map.height /15)
+
+
+
+
+        self.i_walk = self.size_change(load_image("idle.png"))
+        self.r_walk = self.size_change(load_image("r_walk.png"))
+
+        self.l_walk = self.size_change(load_image("l_walk.png"))
+
+        self.d_walk = self.size_change(load_image("d_walk.png"))
+        self.u_walk = self.size_change(load_image("u_walk.png"))
+        self.image = self.i_walk
+
+
         self.rect = self.image.get_rect().move(pos_x, pos_y)
+
+    def size_change(self,i):
+        i = pygame.transform.scale(i, (self.kx, self.ky))
+        return i
+
+    def right(self):
+        self.image = self.r_walk
+
+    def left(self):
+        self.image = self.l_walk
+
+    def down(self):
+        self.image = self.d_walk
+
+    def up(self):
+        self.image = self.u_walk
+
+    def i_stop(self):
+        self.image = self.i_walk
 
 
 class AntiFloor(pygame.sprite.Sprite):
@@ -186,6 +216,9 @@ class MapBase(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.map_name = map_name
 
+        self.width = self.rect.width
+        self.height = self.rect.height
+
     def get_map_name(self):
         return self.map_name
 
@@ -244,7 +277,7 @@ class Map1(MapBase):
     def __init__(self):
 
         map_image = load_image("карта_дом.png")
-        super().__init__(map_image,"карта 1")
+        super().__init__(map_image, "карта №1")
         self.is_map_is_big = False
         self.anti_floor = AntiFloor("пол_дом.png", self.image)
 
@@ -265,22 +298,27 @@ class Map1(MapBase):
         if where == "вниз":
             object_group.remove(*fog_group)
             fog_group.empty()
-
             object_group.remove(*fire_group)
             fire_group.empty()
 
             map_group.remove(map)
 
             map = Map2()
+
+
         else:
             return
+
         self.change_location(where, map, player)
+        if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+            if where == 'вниз':
+                player.rect.x = map.rect.width / 2
 
 
 class Map2(MapBase):
     def __init__(self):
         map_image = load_image("карта_2.png")
-        super().__init__(map_image,"карта2")
+        super().__init__(map_image, "карта №2")
         self.anti_floor = AntiFloor("пол_карта_2.png", self.image)
         self.is_map_is_big = False
 
@@ -307,6 +345,7 @@ class Map2(MapBase):
             map_group.remove(map)
 
             map = Map1()
+
         elif where == "влево":
             object_group.remove(*fog_group)
             fog_group.empty()
@@ -327,11 +366,21 @@ class Map2(MapBase):
             return
         self.change_location(where, map, player)
 
+        if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+            if where == 'вниз':
+                player.rect.x = map.width / 2
+            elif where == 'вверх':
+                player.rect.x = map.width / 2
+            elif where == 'влево':
+                player.rect.y = map.height / 4
+            elif where == 'вправо':
+                player.rect.y = map.height / 4
+
 
 class Map3(MapBase):
     def __init__(self):
         map_image = load_image("карта_3.png")
-        super().__init__(map_image)
+        super().__init__(map_image, "карта №3")
         self.anti_floor = AntiFloor("пол_карта_3.png", self.image)
         self.is_map_is_big = False
 
@@ -351,11 +400,16 @@ class Map3(MapBase):
             return
         self.change_location(where, map, player)
 
+        if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+
+            if where == 'вверх':
+                player.rect.x = map.width / 2
+
 
 class Map4(MapBase):
     def __init__(self):
         map_image = load_image("карта_4.png")
-        super().__init__(map_image)
+        super().__init__(map_image, "карта №4")
         self.anti_floor = AntiFloor("пол_карта_4.png", self.image)
         self.is_map_is_big = False
 
@@ -375,12 +429,15 @@ class Map4(MapBase):
         else:
             return
         self.change_location(where, map, player)
+        if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+            if where == 'вправо':
+                player.rect.y = map.height / 4
 
 
 class Map6(MapBase):
     def __init__(self):
         map_image = load_image("карта_6.png")
-        super().__init__(map_image)
+        super().__init__(map_image, "карта №6")
         self.anti_floor = AntiFloor("пол_карта_6.png", self.image)
         self.is_map_is_big = False
 
@@ -405,12 +462,18 @@ class Map6(MapBase):
         else:
             return
         self.change_location(where, map, player)
+        if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+
+            if where == 'влево':
+                player.rect.y = map.height / 4
+            elif where == 'вправо':
+                player.rect.y = map.rect.height / 2.3
 
 
 class Map7(MapBase):
     def __init__(self):
         map_image = load_image("карта_7.png")
-        super().__init__(map_image)
+        super().__init__(map_image, "карта №7")
         self.image = map_image
         self.rect = self.image.get_rect()
 
@@ -436,13 +499,15 @@ class Map7(MapBase):
         else:
             return
         self.change_location(where, map, player)
-
+        if pygame.sprite.collide_mask(player, map.get_anti_floor()):
+            if where == 'влево':
+                player.rect.y = map.height / 4
 
 class Map8(MapBase):
     def __init__(self):
         map_image = load_image("карта_8.png")
         self.is_map_is_big = True
-        super().__init__(map_image)
+        super().__init__(map_image, "карта №8")
         self.image = map_image
         self.rect = self.image.get_rect()
 
@@ -453,14 +518,51 @@ class Map8(MapBase):
         where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
 
         if where == "влево":
+            map_group.remove(map)
+
+            map = Map7()
+        elif where == "вверх":
+            map_group.remove(map)
+            map = Map9()
+        else:
+            return
+        self.change_location(where, map, player)
+
+
+class Map9(MapBase):
+    def __init__(self):
+        map_image = load_image("карта_9.png")
+        self.is_map_is_big = True
+        super().__init__(map_image, "карта №9")
+        self.image = map_image
+        self.rect = self.image.get_rect()
+
+        self.anti_floor = AntiFloor("пол_карта_9.png", self.image)
+
+    def player_check(self, player):
+        global map
+        where = self.collide_map_border(player)  # <--- получает напрвление движения и двигает пользователя
+        if map.rect.top > - 324:
+            pygame.time.wait(2000)
+            final_screen()
+
+        if where == "вниз":
             object_group.remove(*fog_group)
             fog_group.empty()
             map_group.remove(map)
 
-            map = Map7()
+            map = Map8()
+
         else:
             return
         self.change_location(where, map, player)
+
+        if pygame.sprite.collide_mask(player, map.get_anti_floor()) or not pygame.sprite.collide_mask(player, map):
+
+            if where == 'вниз':
+                player.rect.x = map.rect.width/2
+
+
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -480,12 +582,12 @@ def start():
     pygame.mixer.music.set_volume(0.5)
 
     global map
-    map = Map1()
+    map = Map8()
 
     running = True
 
     size = pygame.display.get_surface().get_size()
-    player = Player(size[0] // 2, size[1] // 2)
+    player = Player(size[0] // 2, size[1] // 2-100)
 
     velocity = 901
     frame_delay = 0
@@ -501,20 +603,24 @@ def start():
                 fire_group.update(tick_animation=True)
             elif event.type == FOG_ANIMATE_EVENT:
                 fog_group.update(tick_animation=True)
+            elif event.type == pygame.KEYUP:
+                if event.key in [pygame.K_LEFT,pygame.K_RIGHT,pygame.K_UP,pygame.K_DOWN,pygame.K_d,pygame.K_a,pygame.K_w,pygame.K_s]:
+                    player.i_stop()
 
         # ------------------------------------------------------------------------------------------------
         distance = int(velocity * frame_delay)
         if pygame.key.get_pressed()[K_RIGHT] or pygame.key.get_pressed()[K_d]:
-            player.image = load_image("r_walk.png")
+            player.right()
             player.rect.left += distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
+
             if are_colliding_anti_floor:  # Если после того как
                 # персонаж прошёл, он соприкасается со стеной
                 player.rect.left -= distance  # то его отбросит назад
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_LEFT] or pygame.key.get_pressed()[K_a]:
-            player.image = load_image("l_walk.png")
+            player.left()
             player.rect.left -= distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
             if are_colliding_anti_floor:
@@ -522,7 +628,7 @@ def start():
 
         # ------------------------------------------------------------------------------------------------
         if pygame.key.get_pressed()[K_UP] or pygame.key.get_pressed()[K_w]:
-            player.image = load_image('u_walk.png')
+            player.up()
             player.rect.top -= distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
             if are_colliding_anti_floor:
@@ -531,7 +637,7 @@ def start():
         # ------------------------------------------------------------------------------------------------
 
         if pygame.key.get_pressed()[K_DOWN] or pygame.key.get_pressed()[K_s]:
-            player.image = load_image('d_walk.png')
+            player.down()
             player.rect.top += distance
             are_colliding_anti_floor = pygame.sprite.collide_mask(player, map.get_anti_floor())
             if are_colliding_anti_floor:
@@ -539,13 +645,10 @@ def start():
 
         # ============================================================================================
 
-        if pygame.key.get_pressed()[K_f]:
-            final_screen()
-
-        # ============================================================================================
-
         all_sprites.update()
-
+        #rint("---------------")
+        #rint(player.rect.x,player.rect.y)
+        #rint(map.rect.x,map.rect.y)
         map.player_check(player)
 
         if map.get_if_map_is_big():
